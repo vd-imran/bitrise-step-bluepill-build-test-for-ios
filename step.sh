@@ -44,12 +44,17 @@ if [ "$generate_coverage" == "true" ]; then
   ENABLE_CODE_COV="-enableCodeCoverage YES"
 fi
 
+SIM_DESTINATION_OS=""
+if [ "$ios_version" != "" ]; then
+  SIM_DESTINATION_OS=",OS=${ios_version}"
+fi
+
 # Build for testing
 xcodebuild build-for-testing $ENABLE_CODE_COV ${additional_xcodebuild_args} \
   -derivedDataPath "${derived_data_path}" \
   -workspace "${workspace}" \
   -scheme "${scheme}" \
-  -destination "platform=iOS Simulator,name=${device_type},OS=${ios_version}" \
+  -destination "platform=iOS Simulator,name=${device_type}$SIM_DESTINATION_OS" \
   | eval $XCPRETTY_OR_CAT
 
 # ---  3. RUN TESTS --- #
@@ -63,15 +68,20 @@ report_output_dir="${bluepill_output_dir}/${report_name}"
 # Don't fail the build if tests fail...
 set +e
 
+
+SIM_RUNTIME=""
+if [ "$ios_version" != "" ]; then
+  SIM_RUNTIME="-r \"iOS ${ios_version}\""
+fi
+
 # Run tests with Bluepill
 bluepill --xctestrun-path "${derived_data_path}"/Build/Products/*.xctestrun \
-    -r "iOS ${ios_version}" \
     -d "${device_type}" \
     -o "${report_output_dir}/" \
     -n ${num_simulators} \
     -f ${failure_tolerance} \
     -F ${retry_only_failed_tests} \
-    -H on ${additional_bluepill_args} \
+    -H on $SIM_RUNTIME ${additional_bluepill_args} \
     || tests_failed=true
 
 # ...renable failures.
